@@ -58,7 +58,7 @@
     "links": []
   },
   "joining": "Undergraduate and graduate students at HUFS who are interested in finance, statistics, and machine learning are welcome to contact <a href=\"mailto:gho3283@hufs.ac.kr\">gho3283@hufs.ac.kr</a> with a short introduction and CV.",
-  "resources": "<p>Computing resources available through the Division of Finance &amp; AI:</p><ul><li>26 GPUs across 5 servers<ul><li>8× NVIDIA RTX PRO 6000 Blackwell (96 GB)</li><li>12× NVIDIA RTX 4090 (24 GB)</li><li>2× NVIDIA L40S (48 GB)</li></ul></li><li>Shared via a GPU reservation system</li></ul>",
+  "resources": "<p>Computing resources available through the Division of Finance &amp; AI:</p><ul><li>22 GPUs across 5 servers<ul><li>8× NVIDIA RTX PRO 6000 Blackwell (96 GB)</li><li>12× NVIDIA RTX 4090 (24 GB)</li><li>2× NVIDIA L40S (48 GB)</li></ul></li><li>Shared via a GPU reservation system</li></ul>",
   "members": [
     {
       "name": "Sahong Park",
@@ -160,11 +160,11 @@
     }
   ],
   "ongoing": [
-    "Univariate time-series anomaly detection",
-    "Multivariate time-series anomaly detection",
+    "Univariate time-series anomaly detection (Sahong Park)",
+    "Multivariate time-series anomaly detection (Sahong Park)",
     "Property valuation across heterogeneous urban markets",
-    "Aqueous solubility prediction with multimodal molecular representations",
-    "Understanding and controlling investment biases in large language models",
+    "Aqueous solubility prediction with multimodal molecular representations (Hyunmo Goo)",
+    "Understanding and controlling investment biases in large language models (Sahong Park, Gakyung Kwon, Jongmin Lee)",
     "Evaluating and diagnosing synthetic tabular data",
     "Theoretical foundations of in-context learning"
   ],
