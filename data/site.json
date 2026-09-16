@@ -224,6 +224,26 @@
   ],
   "publications": [
     {
+      "authors": "Sahong Park, Hyeongwoo Kong†",
+      "title": "Manuscript on univariate time-series anomaly detection",
+      "year": 2026,
+      "type": "under review",
+      "selected": false,
+      "venue": "Under review",
+      "note": "",
+      "links": []
+    },
+    {
+      "authors": "Hyunmo Goo, Hyeongwoo Kong†",
+      "title": "Manuscript on aqueous solubility prediction with multimodal molecular representations",
+      "year": 2026,
+      "type": "under review",
+      "selected": false,
+      "venue": "Under review",
+      "note": "",
+      "links": []
+    },
+    {
       "authors": "Sahong Park, Suhwan Park, Hoyoung Lee, Gakyung Kwon, Wonbin Ahn, Jaewon Choi, Alejandro Lopez-Lira, Yoon Kim, Chanyeol Choi, Hyeongwoo Kong†, Yongjae Lee†",
       "title": "Your AI, On a Dial: Controlling Investment Bias in LLMs with a Single Neuron",
       "year": 2026,

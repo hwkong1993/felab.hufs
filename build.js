@@ -198,12 +198,14 @@ function citeCount(p, cites) {
 }
 
 function pubLi(p, data, cites) {
-  const venue = p.type === 'thesis' ? p.venue : `<i>${p.venue}</i>`;
+  const plain = p.type === 'thesis' || p.type === 'under review';
+  const venue = plain ? p.venue : `<i>${p.venue}</i>`;
   const note = p.note ? ` (${p.note})` : '';
   const links = (p.links || []).map(l => ` [<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label || 'paper')}</a>]`).join('');
   const c = citeCount(p, cites);
   const cited = c ? ` <span class="cited">Cited by <a href="${esc(c.url)}" target="_blank" rel="noopener">${c.count}</a></span>` : '';
-  const bib = `<details class="bib"><summary>bib</summary><pre>${esc(bibEntry(p))}</pre></details>`;
+  // A paper under review is not citable yet, so it gets no BibTeX.
+  const bib = p.type === 'under review' ? '' : `<details class="bib"><summary>bib</summary><pre>${esc(bibEntry(p))}</pre></details>`;
   return `<li>${authorsHtml(p.authors, data)} (${p.year}). ${p.title}. ${venue}${note}.${links}${cited}${bib}</li>`;
 }
 
@@ -287,7 +289,7 @@ function bibEntry(p) {
 
 function bibFile(data) {
   const header = `% BibTeX entries for publications of the ${stripTags(data.site.title)}\n% ${data.site.url || ''}\n\n`;
-  return header + data.publications.map(bibEntry).join('\n\n') + '\n';
+  return header + data.publications.filter(p => p.type !== 'under review').map(bibEntry).join('\n\n') + '\n';
 }
 
 // News ---------------------------------------------------------------------
@@ -495,7 +497,8 @@ ${data.projects.map(p => `\t\t\t<dt>${p.title} <span>${p.sponsor}${p.period ? ',
 
 function pagePublications(data) {
   const s = data.site;
-  const pubs = data.publications.filter(p => p.type !== 'thesis');
+  // Papers under review appear only on their authors' member pages.
+  const pubs = data.publications.filter(p => p.type !== 'thesis' && p.type !== 'under review');
   const theses = data.publications.filter(p => p.type === 'thesis');
   const years = [...new Set(pubs.map(p => p.year))].sort((a, b) => b - a);
   const cites = data.citations;
