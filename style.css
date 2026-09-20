@@ -1088,6 +1088,35 @@ details.bib > pre {
 .globe-trips button.on .n { background: #fff; }
 .globe-trips button.on .when { color: #CFD9E5; }
 
+/* Country color key for the destination pins. */
+.globe-legend {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 5px 16px;
+	margin: 10px 0 0;
+	font-size: 0.8em;
+	color: #555;
+}
+
+.globe-legend .key {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.globe-legend .key i {
+	display: inline-block;
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.globe-legend .key.planned i {
+	background: #fff;
+	border: 1px dashed #8B95A1;
+}
+
 .globe-hint {
 	font-size: 0.8em;
 	color: #777;

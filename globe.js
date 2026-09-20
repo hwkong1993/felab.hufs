@@ -25,8 +25,8 @@ var buttons = Array.prototype.slice.call(wrap.querySelectorAll('.globe-trips but
 var ctx = canvas.getContext('2d');
 var NAVY = '#0B3D6E';
 var RED = '#B4262A';
-// Planned trips (hidden posts): light grey and dotted, a little darker when picked.
-var GREY = '#C3C9D1', GREY_ON = '#8B95A1';
+// Planned trips (hidden posts): a hollow grey pin, since they have no year color yet.
+var GREY_ON = '#8B95A1';
 var RAD = Math.PI / 180;
 var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 function narrow() { return stage.clientWidth < 700; }
@@ -111,36 +111,101 @@ function layout() {
 var places = data.places || {};
 function placeVec(name) { var p = places[name]; return p ? vec(p[0], p[1]) : null; }
 
-// Trips that share the same endpoints are bowed sideways, one to each side of
-// the great circle, so every route stays its own line. All routes float a
-// little above the surface.
-var LIFT = 0.035, SPREAD = 0.12;
-var groups = {};
-trips.forEach(function (t) { var k = t.path.join('>'); groups[k] = (groups[k] || 0) + 1; });
-var placed = {};
-var solid = {};   // places on at least one trip that is not just planned
+// Each trip is a pin at its destination, not a line: the point reads faster
+// than a bundle of great-circle arcs once there are more than a couple of
+// trips, and it is what lets the pin carry a country color. Pins float a
+// little above the surface so they are never hidden behind the land dots.
+var PIN_LIFT = 0.05, PIN_SPREAD = 0.07;
+var PIN_R = 5.5, PIN_R_ON = 7, PIN_STEM = 1.1;
+// Faint great-circle route lines from home to each destination, reintroduced
+// alongside the country pins (the pins alone dropped the multi-leg path);
+// kept translucent so they read as context under the pins, not the main
+// marker.
+var ROUTE_LIFT = 0.02, ROUTE_N = 48, ROUTE_ALPHA = 0.4;
+// Destination place → country. Not derived from lat/lon (a bounding-box test
+// gets border cases like Russia/Turkey wrong), so this is maintained by hand
+// alongside `places` in data/site.json — add an entry whenever a trip visits
+// a place in a country not already listed here.
+var COUNTRY_OF = {
+  Seoul: 'Korea',
+  Gyeongju: 'Korea',
+  Singapore: 'Singapore',
+  Milan: 'Italy'
+};
+// One palette slot per country, alphabetical, from the validated categorical
+// order (dataviz skill) — never reused for interaction state (hover/select
+// stay red/navy) so a pin's hue always means one thing: which country.
+var PALETTE = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'];
+var countries = [];
+trips.forEach(function (t) {
+  t.country = COUNTRY_OF[t.path[t.path.length - 1]] || 'Other';
+  if (!t.hidden && countries.indexOf(t.country) < 0) countries.push(t.country);
+});
+countries.sort();
+var countryColor = {};
+countries.forEach(function (c, i) { countryColor[c] = PALETTE[i % PALETTE.length]; });
+
+// A small color key so the pins' countries read without hovering each one.
+(function () {
+  var legend = wrap.querySelector('.globe-legend');
+  if (!legend) return;
+  countries.forEach(function (c) {
+    var k = el('span', 'key');
+    var sw = el('i'); sw.style.background = countryColor[c];
+    k.appendChild(sw);
+    k.appendChild(document.createTextNode(c));
+    legend.appendChild(k);
+  });
+  if (trips.some(function (t) { return t.hidden; })) {
+    var pk = el('span', 'key planned');
+    pk.appendChild(el('i'));
+    pk.appendChild(document.createTextNode('Planned'));
+    legend.appendChild(pk);
+  }
+})();
+
+// Trips that land on the same place (e.g. two conferences in the same city,
+// different years) get their pins spread a little around that point instead
+// of stacking exactly on top of one another.
+var destGroups = {};
+trips.forEach(function (t) { var k = t.path[t.path.length - 1]; destGroups[k] = (destGroups[k] || 0) + 1; });
+var destPlaced = {};
+// Where the lab is based: every trip's first stop, deduped by name, drawn
+// once as a plain home marker (it has no country color of its own).
+var origins = {};
 trips.forEach(function (t, i) {
-  if (!t.hidden) t.path.forEach(function (n) { solid[n] = true; });
   t.index = i;
   t.vecs = t.path.map(placeVec);
-  var key = t.path.join('>'), n = groups[key], j = placed[key] || 0;
-  placed[key] = j + 1;
-  t.side = (j - (n - 1) / 2) * SPREAD;      // 0 for a lone route; ±SPREAD/2 for a pair
+  t.dest = t.vecs[t.vecs.length - 1];
+  // Sample each leg of the path as a lifted great-circle arc (bowed up in the
+  // middle so overlapping legs stay readable), for the faint route line.
   t.samples = [];
-  for (var s = 0; s + 1 < t.vecs.length; s++) {
-    var a = t.vecs[s], b = t.vecs[s + 1], N = 72;
-    // Unit normal of the great circle through a and b: the sideways direction.
-    var nx = a[1] * b[2] - a[2] * b[1], ny = a[2] * b[0] - a[0] * b[2], nz = a[0] * b[1] - a[1] * b[0];
-    var nl = Math.hypot(nx, ny, nz) || 1; nx /= nl; ny /= nl; nz /= nl;
-    for (var k = 0; k <= N; k++) {
-      var u = k / N, p = slerp(a, b, u), w = Math.sin(Math.PI * u);
-      var q = [p[0] + nx * t.side * w, p[1] + ny * t.side * w, p[2] + nz * t.side * w];
-      var h = (1 + LIFT * w) / Math.hypot(q[0], q[1], q[2]);
-      t.samples.push([q[0] * h, q[1] * h, q[2] * h]);
+  for (var leg = 0; leg + 1 < t.vecs.length; leg++) {
+    var a = t.vecs[leg], b = t.vecs[leg + 1];
+    for (var k = 0; k <= ROUTE_N; k++) {
+      var u = k / ROUTE_N, p = slerp(a, b, u), w = Math.sin(Math.PI * u);
+      var h = (1 + ROUTE_LIFT * w) / Math.hypot(p[0], p[1], p[2]);
+      t.samples.push([p[0] * h, p[1] * h, p[2] * h]);
     }
   }
-  t.mid = t.samples[Math.floor(t.samples.length / 2)];
-  t.dest = t.vecs[t.vecs.length - 1];
+  if (!origins[t.path[0]]) origins[t.path[0]] = t.vecs[0];
+  var key = t.path[t.path.length - 1], n = destGroups[key], j = destPlaced[key] || 0;
+  destPlaced[key] = j + 1;
+  var p = t.dest, ox = p[0], oy = p[1], oz = p[2];
+  if (n > 1) {
+    // An arbitrary tangent basis at p, so the spread sits in the plane
+    // touching the sphere there rather than drifting off the surface.
+    var ref = Math.abs(p[2]) > 0.9 ? [1, 0, 0] : [0, 0, 1];
+    var ux = ref[1] * p[2] - ref[2] * p[1], uy = ref[2] * p[0] - ref[0] * p[2], uz = ref[0] * p[1] - ref[1] * p[0];
+    var ul = Math.hypot(ux, uy, uz) || 1; ux /= ul; uy /= ul; uz /= ul;
+    var vx = p[1] * uz - p[2] * uy, vy = p[2] * ux - p[0] * uz, vz = p[0] * uy - p[1] * ux;
+    var ang = 2 * Math.PI * j / n;
+    ox = p[0] + PIN_SPREAD * (ux * Math.cos(ang) + vx * Math.sin(ang));
+    oy = p[1] + PIN_SPREAD * (uy * Math.cos(ang) + vy * Math.sin(ang));
+    oz = p[2] + PIN_SPREAD * (uz * Math.cos(ang) + vz * Math.sin(ang));
+  }
+  var ol = Math.hypot(ox, oy, oz) || 1;
+  t.pinVec = [ox / ol * (1 + PIN_LIFT), oy / ol * (1 + PIN_LIFT), oz / ol * (1 + PIN_LIFT)];
 });
 
 // Center the opening view on all the routes together.
@@ -160,11 +225,32 @@ function proj(v) {
 
 // Drawing --------------------------------------------------------------------
 
-var hover = null, selected = null, needs = true, dashOffset = 0;
+var hover = null, selected = null, needs = true;
 var FONT = 'Palatino, "Palatino Linotype", "Book Antiqua", serif';
+
+// Nearby pins (Seoul and Gyeongju are ~270km apart, close enough to overlap
+// at this zoom) get their name labels bumped down a line rather than drawn
+// on top of one another. placedLabels is rebuilt fresh each draw(), since
+// screen positions move as the globe turns.
+function rectsOverlap(a, b) { return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; }
+var placedLabels = [];
+function placeLabel(x, y, text, left) {
+  var w = ctx.measureText(text).width, pad = 3;
+  var rx = (left ? x - w - pad : x) - pad;
+  for (var tries = 0; tries < 4; tries++) {
+    var r = { x: rx, y: y - 6, w: w + pad * 2, h: 13 };
+    var hit = false;
+    for (var j = 0; j < placedLabels.length; j++) if (rectsOverlap(r, placedLabels[j])) { hit = true; break; }
+    if (!hit) { placedLabels.push(r); return y; }
+    y += 13;
+  }
+  placedLabels.push({ x: rx, y: y - 6, w: w + pad * 2, h: 13 });
+  return y;
+}
 
 function draw() {
   needs = false;
+  placedLabels = [];
   setRot();
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.clearRect(0, 0, W, H);
@@ -175,7 +261,7 @@ function draw() {
   ctx.lineWidth = 1; ctx.strokeStyle = '#9FB0C4'; ctx.stroke();
 
   // Graticule, every 30°, front half only.
-  var i, k, p, q, r;
+  var i, q, r;
   ctx.beginPath();
   for (i = -60; i <= 60; i += 30) line(function (u) { return vec(i, -180 + 360 * u); }, 120);
   for (i = 0; i < 360; i += 30) line(function (u) { return vec(-90 + 180 * u, i); }, 60);
@@ -194,82 +280,103 @@ function draw() {
   }
   ctx.fillStyle = NAVY; ctx.fill();
 
-  // Routes: others faint, hovered/selected strong.
+  // Route lines: a faint great-circle path from home to each destination, so a
+  // multi-leg trip reads as a path and not just an isolated pin. Colored like
+  // the trip's pin but kept translucent, and drawn under the pins/labels.
   for (i = 0; i < trips.length; i++) {
-    var t = trips[i], on = (t === selected || t === hover);
-    if (selected && !on) ctx.globalAlpha = 0.25;
+    var rt = trips[i], onR = (rt === selected || rt === hover);
     ctx.beginPath();
-    var pen = false;
-    for (k = 0; k < t.samples.length; k++) {
-      p = proj(t.samples[k]);
-      if (!p.vis) { pen = false; continue; }
-      if (pen) ctx.lineTo(p.x, p.y); else ctx.moveTo(p.x, p.y);
-      pen = true;
-    }
-    var color = t.hidden ? (on ? GREY_ON : GREY) : (on ? RED : NAVY);
-    ctx.lineWidth = on ? 2.4 : 1.4;
-    ctx.strokeStyle = color;
-    ctx.setLineDash(t.hidden ? [3, 4] : t === selected && !reduceMotion ? [7, 5] : []);
-    ctx.lineDashOffset = -dashOffset;
+    polyline(rt.samples);
+    ctx.strokeStyle = rt.hidden ? GREY_ON : (countryColor[rt.country] || GREY_ON);
+    ctx.lineWidth = onR ? 1.6 : 1;
+    ctx.globalAlpha = selected && !onR ? 0.15 : ROUTE_ALPHA;
+    if (rt.hidden) ctx.setLineDash([3, 3]);
     ctx.stroke();
     ctx.setLineDash([]);
-    arrowhead(t, on, color);
-    ctx.globalAlpha = 1;
   }
+  ctx.globalAlpha = 1;
 
-  // Place markers and names.
-  var drawn = {};
+  // Markers are drawn first and staked out as label obstacles, then every
+  // label is placed in a second pass — so a label never lands on a pin that
+  // happens to be drawn after it (Seoul and Gyeongju sit close enough on the
+  // globe for that to otherwise happen).
   ctx.font = '12px ' + FONT;
   ctx.textBaseline = 'middle';
+  var pending = [];
+
+  // Home marker(s): where the lab is based. Shared by every trip, so it
+  // carries no year color — just a plain navy dot.
+  var originNames = Object.keys(origins);
+  for (i = 0; i < originNames.length; i++) {
+    q = proj(origins[originNames[i]]);
+    if (!q.vis) continue;
+    ctx.beginPath(); ctx.arc(q.x, q.y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = NAVY; ctx.fill();
+    ctx.lineWidth = 1.5; ctx.strokeStyle = '#fff'; ctx.stroke();
+    placedLabels.push({ x: q.x - 4, y: q.y - 4, w: 8, h: 8 });
+    pending.push([q.x, q.y, originNames[i]]);
+  }
+
+  // Destination pins, one per trip: a colored dot on a short stem, planted at
+  // the place. The color is the trip's year; a planned (hidden) trip is a
+  // hollow dashed pin instead, since it hasn't happened yet and has no year
+  // color to show. Others fade when a trip is selected, the same way the
+  // hover/selected states used to fade the routes.
+  var labeled = {};
   for (i = 0; i < trips.length; i++) {
-    for (k = 0; k < trips[i].path.length; k++) {
-      var name = trips[i].path[k];
-      if (drawn[name]) continue;
-      drawn[name] = true;
-      q = proj(trips[i].vecs[k]);
-      if (!q.vis) continue;
-      ctx.beginPath(); ctx.arc(q.x, q.y, 3.6, 0, Math.PI * 2);
-      ctx.fillStyle = solid[name] ? RED : GREY_ON; ctx.fill();
-      ctx.lineWidth = 1.5; ctx.strokeStyle = '#fff'; ctx.stroke();
-      ctx.fillStyle = '#1A1A1A';
-      var left = q.x > CX + R * 0.55;
-      ctx.textAlign = left ? 'right' : 'left';
-      ctx.fillText(name, q.x + (left ? -8 : 8), q.y);
+    var t = trips[i], on = (t === selected || t === hover);
+    q = proj(t.pinVec);
+    if (!q.vis) continue;
+    var rad = on ? PIN_R_ON : PIN_R, stem = rad * PIN_STEM;
+    var cx = q.x, cy = q.y - stem;
+    ctx.globalAlpha = selected && !on ? 0.35 : 1;
+    ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(cx, cy);
+    ctx.strokeStyle = t.hidden ? GREY_ON : NAVY; ctx.lineWidth = 1.3; ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+    ctx.fillStyle = t.hidden ? '#fff' : (countryColor[t.country] || GREY_ON);
+    ctx.fill();
+    ctx.lineWidth = on ? 2.2 : 1.5;
+    ctx.strokeStyle = t.hidden ? GREY_ON : (on ? RED : '#fff');
+    if (t.hidden) ctx.setLineDash([2, 2]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+    var name = t.path[t.path.length - 1];
+    if (!labeled[name]) {
+      labeled[name] = true;
+      placedLabels.push({ x: cx - rad, y: cy - rad, w: rad * 2, h: rad * 2 });
+      pending.push([cx, cy, name]);
     }
   }
 
-  // Name of the hovered or selected trip, at the top of its arc. A selected
-  // trip with a logo has its name on the logo card instead.
+  ctx.fillStyle = '#1A1A1A';
+  for (i = 0; i < pending.length; i++) {
+    var px = pending[i][0], py = pending[i][1], name2 = pending[i][2];
+    var left2 = px > CX + R * 0.55;
+    ctx.textAlign = left2 ? 'right' : 'left';
+    var tx = px + (left2 ? -8 : 8);
+    var ty = placeLabel(tx, py, name2, left2);
+    ctx.fillText(name2, tx, ty);
+  }
+
+  // Name of the hovered or selected trip, above its pin. A selected trip
+  // with a logo has its name on the logo card instead.
   var lab = hover || selected;
   if (lab && !(lab === selected && lab.logo)) {
-    p = proj(lab.mid);
-    if (p.vis) {
+    q = proj(lab.pinVec);
+    if (q.vis) {
+      var labStem = PIN_R_ON * PIN_STEM;
+      var topY = q.y - labStem - PIN_R_ON;
       ctx.font = 'italic 13px ' + FONT;
       ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
       var tw = ctx.measureText(lab.label).width;
       ctx.fillStyle = 'rgba(255,255,255,0.85)';
-      ctx.fillRect(p.x - tw / 2 - 5, p.y - 24, tw + 10, 18);
+      ctx.fillRect(q.x - tw / 2 - 5, topY - 18, tw + 10, 18);
       ctx.fillStyle = lab.hidden ? GREY_ON : RED;
-      ctx.fillText(lab.label, p.x, p.y - 8);
+      ctx.fillText(lab.label, q.x, topY);
     }
   }
   positionPhotos();
-}
-
-// Small triangle just short of the destination, pointing the way the trip went.
-function arrowhead(t, on, color) {
-  var n = t.samples.length, tip = proj(t.samples[n - 4]), back = proj(t.samples[n - 9]);
-  if (!tip.vis || !back.vis) return;
-  var dx = tip.x - back.x, dy = tip.y - back.y, L = Math.hypot(dx, dy) || 1;
-  dx /= L; dy /= L;
-  var s = on ? 9 : 7;
-  ctx.beginPath();
-  ctx.moveTo(tip.x, tip.y);
-  ctx.lineTo(tip.x - dx * s - dy * s * 0.45, tip.y - dy * s + dx * s * 0.45);
-  ctx.lineTo(tip.x - dx * s + dy * s * 0.45, tip.y - dy * s - dx * s * 0.45);
-  ctx.closePath();
-  ctx.fillStyle = color;
-  ctx.fill();
 }
 
 function line(fn, n) {
@@ -282,27 +389,30 @@ function line(fn, n) {
     pen = true;
   }
 }
+// Same as line(), but over a precomputed list of vecs (a trip's route samples)
+// instead of a parametric function.
+function polyline(vecs) {
+  var pen = false;
+  for (var k = 0; k < vecs.length; k++) {
+    var r = rot(vecs[k]);
+    if (r[0] <= 0.001) { pen = false; continue; }
+    var x = CX + R * r[1], y = CY - R * r[2];
+    if (pen) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+    pen = true;
+  }
+}
 
 // Interaction ----------------------------------------------------------------
 
 function hit(mx, my) {
-  var best = null, bd = 9, i;
-  for (i = 0; i < trips.length; i++) {
-    var t = trips[i];
-    for (var k = 0; k < t.samples.length; k += 2) {
-      var p = proj(t.samples[k]);
-      if (!p.vis) continue;
-      var d = Math.hypot(p.x - mx, p.y - my);
-      if (d < bd) { bd = d; best = t; }
-    }
+  var best = null, bd = 12, stem = PIN_R * PIN_STEM;
+  for (var i = 0; i < trips.length; i++) {
+    var q = proj(trips[i].pinVec);
+    if (!q.vis) continue;
+    var d = Math.hypot(q.x - mx, (q.y - stem) - my);
+    if (d < bd) { bd = d; best = trips[i]; }
   }
-  if (best) return best;
-  // Markers: the first trip that ends there.
-  for (i = 0; i < trips.length; i++) {
-    var q = proj(trips[i].dest);
-    if (q.vis && Math.hypot(q.x - mx, q.y - my) < 10) return trips[i];
-  }
-  return null;
+  return best;
 }
 
 var drag = null, idleSince = 0, tween = null;
@@ -462,8 +572,8 @@ function select(t) {
   wrap.classList.toggle('has-photos', !!t);
   hover = null;
   if (t) {
-    // Turn the globe so the whole route is in front, then let the photos out.
-    var to = lonLat(t.mid);
+    // Turn the globe so the pin is in front, then let the photos out.
+    var to = lonLat(t.pinVec);
     var dLon = ((to[0] - view.lon + 540) % 360) - 180;
     tween = { t0: performance.now(), dur: reduceMotion ? 0 : 650, lon0: view.lon, lat0: view.lat, lon1: view.lon + dLon, lat1: to[1] };
     showPhotos(t);
@@ -486,7 +596,7 @@ function el(tag, cls) { var e = document.createElement(tag); if (cls) e.classNam
 function showPhotos(t) {
   hidePhotos(true);
   var list = (t.photos || []).slice(0, SLOTS.length);
-  var d = proj(t.dest);
+  var d = proj(t.pinVec);
   // The conference logo, a banner hung over the top of the globe; it links to the post.
   if (t.logo) {
     var lf = el('figure', 'gphoto glogo' + (t.hidden ? ' planned' : ''));
@@ -528,7 +638,7 @@ function place(f, i, d) {
 }
 function positionPhotos() {
   if (!figs.length || narrow()) return;
-  var d = selected ? proj(selected.dest) : null;
+  var d = selected ? proj(selected.pinVec) : null;
   figs.forEach(function (f) {
     if (f._center) {
       // Hung across the top of the stage, clear of the routes.
@@ -576,7 +686,6 @@ function frame(now) {
     view.lon += 0.04;
     needs = true;
   }
-  if (selected && !reduceMotion) { dashOffset = (dashOffset + 0.35) % 12; needs = true; }
   if (needs) draw();
 }
 layout();

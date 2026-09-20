@@ -654,7 +654,8 @@ function globeSection(data, posts) {
 \t\t\t<div class="globe-trips">
 ${buttons}
 \t\t\t</div>
-\t\t\t<p class="globe-hint">${g.hint || 'Drag to turn the globe; scroll, pinch or double-tap to zoom. Click a route, or a trip above, to see photos from it.'}</p>
+\t\t\t<div class="globe-legend"></div>
+\t\t\t<p class="globe-hint">${g.hint || 'Drag to turn the globe; scroll, pinch or double-tap to zoom. Click a pin, or a trip above, to see photos from it.'}</p>
 \t\t\t<noscript><ul class="globe-list">
 ${list}
 \t\t\t</ul></noscript>
