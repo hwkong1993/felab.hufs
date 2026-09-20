@@ -25,8 +25,10 @@ var buttons = Array.prototype.slice.call(wrap.querySelectorAll('.globe-trips but
 var ctx = canvas.getContext('2d');
 var NAVY = '#0B3D6E';
 var RED = '#B4262A';
-// Planned trips (hidden posts): a hollow grey pin, since they have no year color yet.
-var GREY_ON = '#8B95A1';
+// Planned trips (hidden posts): a hollow grey pin, since they have no country
+// color yet; the route line under it uses the lighter GREY, darker GREY_ON
+// when hovered/selected (same two greys the pre-pin route design used).
+var GREY = '#C3C9D1', GREY_ON = '#8B95A1';
 var RAD = Math.PI / 180;
 var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 function narrow() { return stage.clientWidth < 700; }
@@ -177,17 +179,6 @@ trips.forEach(function (t, i) {
   t.index = i;
   t.vecs = t.path.map(placeVec);
   t.dest = t.vecs[t.vecs.length - 1];
-  // Sample each leg of the path as a lifted great-circle arc (bowed up in the
-  // middle so overlapping legs stay readable), for the faint route line.
-  t.samples = [];
-  for (var leg = 0; leg + 1 < t.vecs.length; leg++) {
-    var a = t.vecs[leg], b = t.vecs[leg + 1];
-    for (var k = 0; k <= ROUTE_N; k++) {
-      var u = k / ROUTE_N, p = slerp(a, b, u), w = Math.sin(Math.PI * u);
-      var h = (1 + ROUTE_LIFT * w) / Math.hypot(p[0], p[1], p[2]);
-      t.samples.push([p[0] * h, p[1] * h, p[2] * h]);
-    }
-  }
   if (!origins[t.path[0]]) origins[t.path[0]] = t.vecs[0];
   var key = t.path[t.path.length - 1], n = destGroups[key], j = destPlaced[key] || 0;
   destPlaced[key] = j + 1;
@@ -205,7 +196,27 @@ trips.forEach(function (t, i) {
     oz = p[2] + PIN_SPREAD * (uz * Math.cos(ang) + vz * Math.sin(ang));
   }
   var ol = Math.hypot(ox, oy, oz) || 1;
-  t.pinVec = [ox / ol * (1 + PIN_LIFT), oy / ol * (1 + PIN_LIFT), oz / ol * (1 + PIN_LIFT)];
+  // The pin's own point on the sphere's surface, before PIN_LIFT raises it
+  // above the land dots. Two trips landing on the same city (Singapore, say)
+  // get different spread points here, so each gets its own line below rather
+  // than both converging on the one shared place.
+  var destSpread = [ox / ol, oy / ol, oz / ol];
+  t.pinVec = [destSpread[0] * (1 + PIN_LIFT), destSpread[1] * (1 + PIN_LIFT), destSpread[2] * (1 + PIN_LIFT)];
+
+  // Sample each leg of the path as a lifted great-circle arc (bowed up in the
+  // middle so overlapping legs stay readable), for the faint route line. The
+  // last leg ends at this trip's own (possibly spread) point, not the shared
+  // place, so the line always lands exactly on its pin.
+  var waypoints = t.vecs.slice(0, -1).concat([destSpread]);
+  t.samples = [];
+  for (var leg = 0; leg + 1 < waypoints.length; leg++) {
+    var a = waypoints[leg], b = waypoints[leg + 1];
+    for (var k = 0; k <= ROUTE_N; k++) {
+      var u = k / ROUTE_N, sp = slerp(a, b, u), w = Math.sin(Math.PI * u);
+      var h = (1 + ROUTE_LIFT * w) / Math.hypot(sp[0], sp[1], sp[2]);
+      t.samples.push([sp[0] * h, sp[1] * h, sp[2] * h]);
+    }
+  }
 });
 
 // Center the opening view on all the routes together.
@@ -281,13 +292,16 @@ function draw() {
   ctx.fillStyle = NAVY; ctx.fill();
 
   // Route lines: a faint great-circle path from home to each destination, so a
-  // multi-leg trip reads as a path and not just an isolated pin. Colored like
-  // the trip's pin but kept translucent, and drawn under the pins/labels.
+  // multi-leg trip reads as a path and not just an isolated pin. Colored the
+  // same way the pre-pin route design was (plain navy, red when hovered or
+  // selected, grey for a planned trip) rather than by country, since the
+  // country encoding already lives on the pin; kept translucent so it reads
+  // as context under the pins, not a second marker.
   for (i = 0; i < trips.length; i++) {
     var rt = trips[i], onR = (rt === selected || rt === hover);
     ctx.beginPath();
     polyline(rt.samples);
-    ctx.strokeStyle = rt.hidden ? GREY_ON : (countryColor[rt.country] || GREY_ON);
+    ctx.strokeStyle = rt.hidden ? (onR ? GREY_ON : GREY) : (onR ? RED : NAVY);
     ctx.lineWidth = onR ? 1.6 : 1;
     ctx.globalAlpha = selected && !onR ? 0.15 : ROUTE_ALPHA;
     if (rt.hidden) ctx.setLineDash([3, 3]);
