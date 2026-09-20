@@ -205,16 +205,25 @@ trips.forEach(function (t, i) {
 
   // Sample each leg of the path as a lifted great-circle arc (bowed up in the
   // middle so overlapping legs stay readable), for the faint route line. The
-  // last leg ends at this trip's own (possibly spread) point, not the shared
-  // place, so the line always lands exactly on its pin.
-  var waypoints = t.vecs.slice(0, -1).concat([destSpread]);
+  // last leg ends at this trip's own pinVec — same lifted point the pin's
+  // stem is planted at — not just the (unlifted) surface below it, or the
+  // line would visibly miss the pin by PIN_LIFT once the pin sits near the
+  // rim (where that radial lift shows up as a real screen-space offset).
+  var waypoints = t.vecs.slice(0, -1).concat([t.pinVec]);
   t.samples = [];
   for (var leg = 0; leg + 1 < waypoints.length; leg++) {
     var a = waypoints[leg], b = waypoints[leg + 1];
+    var ra = Math.hypot(a[0], a[1], a[2]) || 1, rb = Math.hypot(b[0], b[1], b[2]) || 1;
+    var aDir = [a[0] / ra, a[1] / ra, a[2] / ra], bDir = [b[0] / rb, b[1] / rb, b[2] / rb];
     for (var k = 0; k <= ROUTE_N; k++) {
-      var u = k / ROUTE_N, sp = slerp(a, b, u), w = Math.sin(Math.PI * u);
-      var h = (1 + ROUTE_LIFT * w) / Math.hypot(sp[0], sp[1], sp[2]);
-      t.samples.push([sp[0] * h, sp[1] * h, sp[2] * h]);
+      // Direction comes from slerp-ing the unit endpoints; radius is
+      // interpolated separately (ra at the start to rb at the end, plus the
+      // ROUTE_LIFT bow at the midpoint) so a lifted endpoint doesn't skew the
+      // great-circle angle slerp() computes from the dot product.
+      var u = k / ROUTE_N, dir = slerp(aDir, bDir, u), w = Math.sin(Math.PI * u);
+      var dl = Math.hypot(dir[0], dir[1], dir[2]) || 1;
+      var rr = (ra + (rb - ra) * u + ROUTE_LIFT * w) / dl;
+      t.samples.push([dir[0] * rr, dir[1] * rr, dir[2] * rr]);
     }
   }
 });
@@ -301,6 +310,15 @@ function draw() {
     var rt = trips[i], onR = (rt === selected || rt === hover);
     ctx.beginPath();
     polyline(rt.samples);
+    // The pin itself is drawn on a short screen-space "stem" above its
+    // surface point (proj(pinVec)) rather than right on it, so the line has
+    // to climb that same stem to actually reach the dot instead of stopping
+    // at its foot.
+    var qEnd = proj(rt.pinVec);
+    if (qEnd.vis) {
+      var radEnd = onR ? PIN_R_ON : PIN_R;
+      ctx.lineTo(qEnd.x, qEnd.y - radEnd * PIN_STEM);
+    }
     ctx.strokeStyle = rt.hidden ? (onR ? GREY_ON : GREY) : (onR ? RED : NAVY);
     ctx.lineWidth = onR ? 1.6 : 1;
     ctx.globalAlpha = selected && !onR ? 0.15 : ROUTE_ALPHA;
