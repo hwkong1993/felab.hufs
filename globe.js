@@ -422,14 +422,15 @@ function line(fn, n) {
   }
 }
 // Same as line(), but over a precomputed list of vecs (a trip's route samples)
-// instead of a parametric function.
+// instead of a parametric function. Uses proj()'s visibility, same as the
+// pins, so a lifted route stays drawn past the rim up to a lifted pin there
+// instead of stopping short of it when the globe is turned side-on.
 function polyline(vecs) {
   var pen = false;
   for (var k = 0; k < vecs.length; k++) {
-    var r = rot(vecs[k]);
-    if (r[0] <= 0.001) { pen = false; continue; }
-    var x = CX + R * r[1], y = CY - R * r[2];
-    if (pen) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+    var q = proj(vecs[k]);
+    if (!q.vis) { pen = false; continue; }
+    if (pen) ctx.lineTo(q.x, q.y); else ctx.moveTo(q.x, q.y);
     pen = true;
   }
 }
