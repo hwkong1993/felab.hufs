@@ -225,13 +225,18 @@
   "publications": [
     {
       "authors": "Sahong Park, Hyeongwoo Kong†",
-      "title": "Manuscript on univariate time-series anomaly detection",
+      "title": "A Lightweight Detector Ensemble for Univariate Time-Series Anomaly Detection",
       "year": 2026,
-      "type": "under review",
+      "type": "preprint",
       "selected": false,
-      "venue": "Under review",
+      "venue": "SSRN preprint",
       "note": "",
-      "links": []
+      "links": [
+        {
+          "label": "paper",
+          "url": "https://doi.org/10.2139/ssrn.7552763"
+        }
+      ]
     },
     {
       "authors": "Hyunmo Goo, Hyeongwoo Kong†",
