@@ -264,6 +264,21 @@
       ]
     },
     {
+      "authors": "Sahong Park, Hyeongwoo Kong†",
+      "title": "Gerber-Shrinkage Covariance: Global Minimum Variance Portfolio via Correlation-Based Dynamic Blending",
+      "year": 2026,
+      "type": "conference",
+      "selected": false,
+      "venue": "KIIE/KORMS Spring Joint Conference",
+      "note": "Oral Presentation",
+      "links": [
+        {
+          "label": "slides",
+          "url": "https://drive.google.com/file/d/1eAV1dmQLPhsrxVvCL8p3Kz98ttIjmgVz/view"
+        }
+      ]
+    },
+    {
       "authors": "Kiwan Kwon, Kangmin Kim, Hojin Lee, Yeseong Jung, Hyeongwoo Kong, Vamsi K. Potluru, Saerom Park†, Yongjae Lee†",
       "title": "Seq2Synth: Benchmarking Temporal Fidelity in Synthetic Sequential Tabular Data",
       "year": 2026,
