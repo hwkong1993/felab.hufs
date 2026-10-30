@@ -58,7 +58,7 @@
     "links": []
   },
   "joining": "Undergraduate and graduate students at HUFS who are interested in finance, statistics, and machine learning are welcome to contact <a href=\"mailto:gho3283@hufs.ac.kr\">gho3283@hufs.ac.kr</a> with a short introduction and CV.",
-  "resources": "<p>Computing resources available through the Division of Finance &amp; AI:</p><ul><li>22 GPUs across 5 servers<ul><li>8× NVIDIA RTX PRO 6000 Blackwell (96 GB)</li><li>12× NVIDIA RTX 4090 (24 GB)</li><li>2× NVIDIA L40S (48 GB)</li></ul></li><li>Shared via a GPU reservation system</li></ul>",
+  "resources": "<p>Computing resources available through the Division of Finance &amp; AI:</p><ul><li>24 GPUs across 5 servers<ul><li>8× NVIDIA RTX PRO 6000 Blackwell (96 GB)</li><li>12× NVIDIA RTX 4090 (24 GB)</li><li>4× NVIDIA L40S (48 GB)</li></ul></li><li>Shared via a GPU reservation system</li></ul>",
   "members": [
     {
       "name": "Sahong Park",
