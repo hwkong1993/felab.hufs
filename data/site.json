@@ -254,8 +254,8 @@
       "year": 2026,
       "type": "preprint",
       "selected": true,
-      "venue": "arXiv preprint",
-      "note": "",
+      "venue": "AI for Finance: 3rd Workshop on LLMs and Generative AI for Finance @ ACM ICAIF 2026",
+      "note": "Non-archival, Poster",
       "links": [
         {
           "label": "paper",
@@ -365,6 +365,11 @@
     }
   ],
   "news": [
+    {
+      "date": "2026-10",
+      "short": "\"Your AI, On a Dial\" accepted to the AI for Finance Workshop @ ACM ICAIF 2026.",
+      "text": "\"Your AI, On a Dial: Controlling Investment Bias in LLMs with a Single Neuron\" accepted to the AI for Finance Workshop @ ACM ICAIF 2026 (Milan, Nov 14) as a poster presentation. [<a href=\"https://arxiv.org/pdf/2608.22852\" target=\"_blank\">paper</a>] [<a href=\"https://ai4f.org/\" target=\"_blank\">workshop</a>]"
+    },
     {
       "date": "2026-08",
       "short": "Preprint on controlling investment bias in LLMs posted on arXiv.",
