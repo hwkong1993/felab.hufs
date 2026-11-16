@@ -601,23 +601,56 @@
     {
       "date": "2026-11-14",
       "type": "conference",
-      "location": "Università Bocconi",
-      "title": "ICAIF 2026",
-      "titleKr": "",
-      "summary": "2026년 11월 14일부터 17일까지 진행되는 ICAIF 2026에 견학 예정입니다.",
-      "text": "<p>ICAIF 2026 견학 예정<p>",
-      "photos": [],
+      "location": "Università Bocconi, Milan",
+      "title": "ICAIF 2026 워크숍 발표 및 견학",
+      "titleKr": "The 7th ACM International Conference on AI in Finance, Milan",
+      "summary": "2026년 11월 14일부터 17일까지 이탈리아 밀라노에서 열린 제7회 ACM International Conference on AI in Finance(ICAIF '26)에 참가했습니다. AI for Finance 워크숍에서 학부연구생 박사홍이 포스터 발표를 했습니다.",
+      "text": "<p>2026년 11월 14일부터 17일까지 이탈리아 밀라노 Bocconi University에서 열린 <b>제7회 ACM International Conference on AI in Finance(ICAIF '26)</b>에 참가했습니다. 지난해 ICAIF '25에 참관하며 다음에는 발표를 하러 오겠다고 했는데, 1년 만에 그 목표를 이뤘습니다.</p><p>학부연구생 박사홍이 <b>AI for Finance: 3rd Workshop on LLMs and Generative AI for Finance</b>에서 <i>Your AI, On a Dial: Controlling Investment Bias in LLMs with a Single Neuron</i>을 포스터로 발표했습니다.</p><p>이번 학회에는 공형우 교수님과 이종민 학부연구생, 서민지 학생, 그리고 Finance &amp; AI융합학부의 형제 연구실인 금융 애널리틱스 연구실의 황서윤 학생이 함께했습니다.</p>",
+      "photos": [
+        {
+          "url": "images/blog/31039.jpg",
+          "caption": "왼쪽부터 이종민 학생, 공형우 교수님, 박사홍, 서민지, 황서윤 학생"
+        },
+        {
+          "url": "images/blog/kakaotalk_20261116_193252272_01.jpg",
+          "caption": "출국 전, 인천공항 안내 로봇이 찍어준 사진"
+        },
+        {
+          "url": "images/blog/kakaotalk_20261116_193252272.jpg",
+          "caption": "포스터 앞에서 연구를 설명하는 박사홍 학부연구생"
+        },
+        {
+          "url": "images/blog/img_3962.jpg",
+          "caption": "발표를 마치고 신나 보인다"
+        },
+        {
+          "url": "images/blog/img_3982.jpg",
+          "caption": "숙소에서 피자 파티"
+        },
+        {
+          "url": "images/blog/31019.jpg",
+          "caption": "황서윤 학생의 오일 파스타와 이종민 학부연구생의 이탈리아식 까르보나라"
+        }
+      ],
       "links": [
         {
           "label": "ICAIF 2026 website",
           "url": "https://icaif2026.org/"
+        },
+        {
+          "label": "Your AI, On a Dial (arXiv)",
+          "url": "https://arxiv.org/pdf/2608.22852"
+        },
+        {
+          "label": "AI for Finance Workshop",
+          "url": "https://ai4f.org/"
         }
       ],
       "route": "Seoul > Milan",
       "tripLabel": "ICAIF 2026",
       "logo": "images/blog/logos/icaif26.svg",
-      "hidden": true,
-      "id": ""
+      "hidden": false,
+      "id": "2026-11-icaif"
     }
   ],
   "places": {
