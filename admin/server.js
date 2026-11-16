@@ -287,9 +287,24 @@ const server = http.createServer((req, res) => {
   handle(req, res).catch(e => { console.error(e); try { send(res, 500, 'Server error'); } catch (_) {} });
 });
 
+// admin.bat passes --open. The browser is opened only after listen() so it
+// never races the server and lands on a "can't connect" page.
+const ADMIN_URL = `http://${config.host}:${config.port}/admin`;
+function openBrowser() {
+  if (process.argv.includes('--open')) require('child_process').exec(`start "" "${ADMIN_URL}"`);
+}
+
+server.on('error', e => {
+  if (e.code !== 'EADDRINUSE') throw e;
+  console.log(`Port ${config.port} is already in use, so the admin server is probably already running.`);
+  console.log(`Open ${ADMIN_URL}  (or close the other server window and run this again).`);
+  openBrowser();
+});
+
 server.listen(config.port, config.host, () => {
   console.log(`Site preview:  http://${config.host}:${config.port}/`);
-  console.log(`Admin page:    http://${config.host}:${config.port}/admin`);
+  console.log(`Admin page:    ${ADMIN_URL}`);
+  openBrowser();
   if (checkPassword(DEFAULT_PASSWORD)) {
     console.log(`WARNING: the admin password is still the initial "${DEFAULT_PASSWORD}". Change it in the Password tab.`);
   }

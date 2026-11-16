@@ -7,6 +7,6 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
-start "" http://127.0.0.1:8080/admin
-node admin\server.js
+rem --open makes the server open the browser once it is listening.
+node admin\server.js --open
 pause
