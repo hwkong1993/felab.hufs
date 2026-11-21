@@ -186,8 +186,24 @@ async function api(path, body) {
   if (!r.ok) throw new Error(j.error || r.statusText || 'request failed');
   return j;
 }
+// JPG/PNG become WebP with the longest side at most 1600px, done in the browser
+// so the server stays package-free. GIF (animation) and SVG (vector) pass
+// through, as does anything the browser cannot encode (older Safari returns
+// PNG) or that comes out larger (small logos).
+async function toWebp(fl) {
+  if (!/^image\/(jpeg|png)$/.test(fl.type)) return fl;
+  const bmp = await createImageBitmap(fl);
+  const s = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
+  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  const blob = await new Promise(r => c.toBlob(r, 'image/webp', 0.82));
+  if (!blob || blob.type !== 'image/webp' || blob.size >= fl.size) return fl;
+  return new File([blob], fl.name.replace(/\.\w+$/, '') + '.webp', { type: 'image/webp' });
+}
 async function upload(fl, folder) {
   setStatus('Uploading ' + fl.name + '…');
+  fl = await toWebp(fl);
   const b64 = await new Promise(r => { const rd = new FileReader(); rd.onload = () => r(rd.result.split(',')[1]); rd.readAsDataURL(fl); });
   return (await api('/api/upload', { name: fl.name, data: b64, folder })).path;
 }
